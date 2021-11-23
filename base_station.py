@@ -37,6 +37,7 @@ def listen_for_topology():
             # return topology information to all devices in the network
             Thread(target=return_topolgy).start()
 
+
 print('Starting base station ...')
 t = Thread(target=listen_for_topology)
 t.start()

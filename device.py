@@ -89,6 +89,11 @@ def main():
     device_car_port_start = args.port_car
     num_of_devices = args.devices
 
+    if not os.path.exists(discovery_dir):
+    
+    # Create a new directory because it does not exist 
+        os.makedirs(discovery_dir)
+
     # create clients
     for i in range(num_of_devices):
         clients.append(Thread(target=joinNetwork, args=(device_top_port_start+i,device_car_port_start+i,)))
