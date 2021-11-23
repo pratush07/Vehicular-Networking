@@ -13,13 +13,13 @@ def return_topolgy():
 
     for _, data in network_participants.items():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((data['address'], data['port']))
+            s.connect((data['address'], data['top_port']))
             s.send(json.dumps(network_participants).encode('utf-8'))
 
 def add_to_network(addr, data):
     address = addr[0]
     data['address'] = address
-    network_participants[data['port']] = data
+    network_participants[data['top_port']] = data
 
 # if new peers join, they will a send a message here
 def listen_for_topology():
