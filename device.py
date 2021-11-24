@@ -9,6 +9,10 @@ import os
 
 peer_discovery_map = {}
 
+base_station_host = 'localhost'
+base_station_port = 30201
+car_host = 'localhost'
+
 def flushPeerDiscoveryMap(port):
     print('saving peer discovery to file..')
     file_path = os.path.join(discovery_dir,discovery_map_file_name + '_' + str(port) + "." + discovery_map_file_ext)
@@ -21,8 +25,11 @@ def flushPeerDiscoveryMap(port):
 def updatePeerDiscoveryMap(peer, routingTable):
     car_ports = []
     for _, data in routingTable.items():
-        car_ports.append(data['car_port'])
-    peer_discovery_map[peer] = car_ports
+        car_addr = car_host+":"+str(peer)
+        peer_addr = data['address'] + ":" + str(data['car_port'])
+        if car_addr != peer_addr:
+            car_ports.append((data['address'],data['car_port']))
+    peer_discovery_map[car_addr] = car_ports
     print(peer_discovery_map)
 
 # join network
@@ -38,7 +45,7 @@ def recvTopology(top_port, car_port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
         print('listening to topology messages')
         print('binding to ' + str(top_port))
-        socketObject.bind(('localhost', top_port))
+        socketObject.bind((car_host, top_port))
         socketObject.listen()
         
         # listen continuously for the topology info as new peers join
@@ -53,14 +60,14 @@ def recvPeerMessages(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
         print('listening to car messages')
         print('binding to ' + str(port))
-        socketObject.bind(('localhost', port))
+        socketObject.bind((car_host, port))
         socketObject.listen()
         
         # listen continuously for the topology info as new peers join
         while True:
             conn, _ = socketObject.accept()
             message = json.loads(conn.recv(4096).decode('utf-8'))
-            print('%s : Incoming Message -> %s' % (str(port),str(message)))
+            print('%s:%s Incoming Message -> %s' % (str(port), car_host,str(message)))
 
 def main():
     clients = []
@@ -68,10 +75,25 @@ def main():
     clients_msg_recv = []
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--host-car', help='car host for topology', type=str)
     parser.add_argument('--port-top', help='initial port for topology', type=int)
     parser.add_argument('--port-car', help='initial port for cars', type=int)
     parser.add_argument('--devices', help='number of devices in this network', type=int)
+    parser.add_argument('--base-host', help='base station host', type=str)
+    parser.add_argument('--base-port', help='base station port', type=int)
     args = parser.parse_args()
+
+    if args.host_car is not None:
+        global car_host
+        car_host = args.host_car
+    
+    if args.base_host is not None:
+        global base_station_host
+        base_station_host = args.base_host
+        
+    if args.base_port is not None:
+        global base_station_port
+        base_station_port = args.base_port
 
     if args.port_top is None:
         print("Please specify the initial topology port")

@@ -3,8 +3,12 @@ from config import *
 from threading import Thread
 import json
 import time
+import argparse
 
 network_participants = {}
+
+base_station_host = 'localhost'
+base_station_port = 30201
 
 # control plane to return topology
 def return_topolgy():
@@ -37,8 +41,24 @@ def listen_for_topology():
             # return topology information to all devices in the network
             Thread(target=return_topolgy).start()
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host', help='host to run the base station', type=str)
+    parser.add_argument('--port', help='port for the base station', type=int)
+    args = parser.parse_args()
 
-print('Starting base station ...')
-t = Thread(target=listen_for_topology)
-t.start()
-t.join()
+    if args.host is not None:
+        global base_station_host
+        base_station_host = args.host
+        
+    if args.port is not None:
+        global base_station_port
+        base_station_port = args.port
+    
+    print('Starting base station at %s on port %s' % (base_station_host, base_station_port))
+    t = Thread(target=listen_for_topology)
+    t.start()
+    t.join()
+
+if __name__ == '__main__':
+    main()
