@@ -15,7 +15,7 @@ car_host = 'localhost'
 
 def flushPeerDiscoveryMap(port):
     print('saving peer discovery to file..')
-    file_path = os.path.join(discovery_dir,discovery_map_file_name + '_' + str(port) + "." + discovery_map_file_ext)
+    file_path = os.path.join(discovery_dir,discovery_map_file_name + '_' + car_host + '_' + str(port) + "." + discovery_map_file_ext)
     with open(file_path, 'w') as f:
         json.dump(peer_discovery_map, f)
     time.sleep(10)
