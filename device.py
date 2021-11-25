@@ -113,9 +113,9 @@ class vehicle:
         self.header = header
 
         self.base_station_port = base_station_port
-        self.base_station_host = car_host
+        self.base_station_host = base_station_host
 
-        self.car_host = base_station_host
+        self.car_host = car_host
         self.device_top_port = top_port
         self.device_car_port = car_port 
 
