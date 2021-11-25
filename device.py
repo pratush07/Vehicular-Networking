@@ -8,7 +8,9 @@ import argparse
 import os
 
 from Sensors.FuelSensor import Fuelsensor
-
+from Sensors.DirectionSensor import Directionsensor
+from Sensors.LightSensor import Lightsensor
+from Sensors.PositionSensor import Positionsensor
 
 
 class vehicle:
@@ -21,6 +23,9 @@ class vehicle:
     device_top_port_start = 0
     device_car_port_start = 0
     Fs = Fuelsensor("FuelSensor")
+    Ds = Directionsensor("Directionsensor")
+    Ls = Lightsensor("Lightsensor")
+    Ps = Positionsensor("Positionsensor")
     peer_map_file = ""
     
     def flushPeerDiscoveryMap(self):
@@ -89,16 +94,22 @@ class vehicle:
                     data = json.load(f)
                     for src, dests in data.items():
                         for dest in dests:
-                            if (dest != self.device_car_port_start):
+                            if (dest[1] != self.device_car_port_start):
                                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
-                                    print('sending msg to ' + str(dest))
-                                    print(str(dests))
-                                    print(str(src))
-                                    s.connect((dest[0], dest[1]))
-                                    #s.send(json.dumps({'msg': 'hello from car port ' + str(src)}).encode('utf-8'))
-                                    s.send(self.Fs.send_data().encode('utf-8'))
-                                    time.sleep(2)
+                                    #try:
+                                        print('sending msg to ' + str(dest))
+                                        #print(str(dests))
+                                        #print(str(src))
+                                        s.connect((dest[0], dest[1]))
+                                        #s.send(json.dumps({'msg': 'hello from car port ' + str(src)}).encode('utf-8'))
+                                        s.send(self.Fs.get_data().encode('utf-8'))
+                                        #s.send(self.Ds.get_data().encode('utf-8'))
+                                        #s.send(self.Ls.get_data().encode('utf-8'))
+                                        #s.send(self.Ps.get_data().encode('utf-8'))
+                                        time.sleep(2)
+                                    #except:
+                                        #continue
         else:
             print('no device active..')
         print('going to sleep..')

@@ -1,24 +1,24 @@
-from Sensors.sensor import Sensor
+import random
+import json
 
-class Positionsensor(Sensor):
+class Lightsensor:
+    
+    data = {}
+    
     def __init__(self, header):
-        Sensor.__init__(self, header)
+        self.header = header
+        self.generate_data()
         
-    def Sensor_data():
-        record_data = {'id': self.header, 'Beam Intensity': random.uniform(0, 5000)}
+    def generate_data(self):
+        record_data = {'id': self.header, 'Beam Intensity': random.uniform(0, 4500)}
 
-        data = json.dumps(record_data)
-        print("Headlight Intensity Generated")
-        print("Data:", data)
-        return data
+        self.data = json.dumps(record_data)
+        #print("Fuel Generated")
+        #print("Data:", data)
+        #return data
         
-    def send_data(self, PORT1, PORT2):
-    try:
-        self.data = self.sensor_data()
-        # send data
-        sdr.send(self.data, PORT1)
-    except:
-        print("Server not available")
-        self.data = self.sensor_data()
-        # send data
-        sdr.send(self.data, PORT2)
+    def get_data(self):
+        return  self.data
+        
+    def set_data(self, val):
+        self.data['Beam Intensity'] = val
