@@ -2,7 +2,6 @@ import socket
 from config import *
 from threading import Thread
 import json
-import time
 import argparse
 
 network_participants = {}
@@ -23,7 +22,7 @@ def return_topolgy():
 def add_to_network(addr, data):
     address = addr[0]
     data['address'] = address
-    network_participants[data['top_port']] = data
+    network_participants[data['header']] = data
 
 # if new peers join, they will a send a message here
 def listen_for_topology():

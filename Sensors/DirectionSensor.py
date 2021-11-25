@@ -12,10 +12,7 @@ class Directionsensor:
     def generate_data(self):
         record_data = {'id': self.header, 'Direction': "East"}
 
-        self.data = json.dumps(record_data)
-        #print("Fuel Generated")
-        #print("Data:", data)
-        #return data
+        self.data = record_data
         
     def get_data(self):
         return  self.data
