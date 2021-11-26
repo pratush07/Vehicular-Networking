@@ -1,4 +1,5 @@
 #import the socket module
+
 import socket
 from threading import Thread, Lock
 import json
@@ -20,19 +21,31 @@ class vehicle:
         with open(file_path, 'w') as f:
             json.dump(self.peer_discovery_map, f)
     
-    def flushMessages(self, message):
+    def flushMessages(self, message):  
         print('saving peer messages to file..')
-        file_path = os.path.join(messages_dir,self.peer_messages_file)
-        with open(file_path, 'a+') as f:
-            json.dump(message, f)
-            f.write("\n")
+        file_path = os.path.join(messages_dir,self.peer_messages_file)    
+        try:    
+            with open(file_path,'r') as f:
+                lines = f.readlines()
+                for line in lines:
+                    temp = json.loads(line)
+                    if (temp['sender'] == message['sender']):
+                        lines[int(message['sender'])] = message + "\n"
+     
+            with open(file_path,'w') as f:
+                f.writelines(lines)
+                f.close()
+        except:
+            with open(file_path,'w+') as f:
+                json.dump(message, f)
+                f.write('\n')
 
     # update peer discovery map for each peer
     def updatePeerDiscoveryMap(self, peer, routingTable):
         car_ports = []
         for key, data in routingTable.items():
             if self.header != key and self.header != data['header']:
-                car_ports.append((data['address'],data['car_port']))
+                car_ports.append((data['address'],data['car_port'],data['header']))
         self.peer_discovery_map[self.header] = car_ports
         print(self.peer_discovery_map)
 
@@ -75,9 +88,70 @@ class vehicle:
                 
                 print('%s (%s:%s) Incoming Message -> %s (sent by %s)' 
                 % (self.header, self.car_host,str(port),str(message), message['sender']))
-
-                self.flushMessages(message)
                 
+                if message['message'] == 'gossip':
+                    self.flushMessages(message)
+                
+                if (self.Status == "Looking for Platoon"):
+                    Thread(target = self.lookforPrevcar()).start()
+                    
+                if message['message'] == 'Join Platoon' and self.Status == "Looking for Platoon":
+                    self.joinnewPlatoon(message)
+    
+    #need to add threshold to config file
+    def lookforPrevcar():
+        file_path = os.path.join(messages_dir,self.peer_messages_file)
+        current_pos = self.Ps.get_data()
+        tempPrevCar = ""
+        tempClosest = 999999
+        tempData = ""
+        
+        with open(file_path,'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                line = json.loads(line)
+                if (current_pos - line['position']['X'] < tempClosest and current_pos - line['position']['X'] > 0) :
+                    tempClosest = current_pos - line['position']['X']
+                    tempPrevCar = lines['sender']
+                    tempData = line
+                    
+        if tempPrevCar != "" :
+            self.Status = "Joining Platoon"
+            StableSpeed = int(abs(tempData['speed'] - self.Ss.get_data())/2)
+            
+            if tempData['speed'] - self.Ss.get_data() < 0 or (current_pos - line['position']['X'] - threshold)/(tempData['speed'] - self.Ss.get_data()) > timetojoin_threshold:
+                if (current_pos - line['position']['X'] - distance_threshold)/timetojoin_threshold > maxSpeed:
+                    newSpeed = maxSpeed
+                    timetojoin = (current_pos - line['position']['X'] - threshold)/newSpeed
+                else:
+                    newSpeed = (current_pos - line['position']['X'] - distance_threshold)/timetojoin_threshold + self.Ss.get_data()
+                    timetojoin = timetojoin_threshold
+            else:
+                newSpeed = tempData['speed']
+                timetojoin = (current_pos - line['position']['X'] - threshold)/(tempData['speed'] - self.Ss.get_data())
+
+            messageID = random.randrange(10000)
+            
+        for _, dests in self.peer_discovery_map.items():
+            for dest in dests:
+                if dest[3] == tempPrevCar :
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        s.connect((dest[0], dest[1]))  
+                        payload = {}
+                        payload['message'] = 'Join Platoon'
+                        payload['StableSpeed'] = StableSpeed
+                        payload['newSpeed'] = newSpeed
+                        payload['timetojoin'] = timetojoin
+                        payload['messageID'] = messageID
+                        s.send(json.dumps(payload).encode('utf-8'))
+                        
+        time.sleep(timetojoin)
+        #set speed: to do
+        self.Status = "Stable Platoon formed"
+
+    def joinnewPlatoon(message):
+        self.Status == "Join Platoon"
+    
     def gossip(self):
         print('%s (%s:%s) is sending messages to peers' %(self.header, self.car_host, self.device_car_port))
         if len(self.peer_discovery_map) != 0:
@@ -86,6 +160,7 @@ class vehicle:
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         s.connect((dest[0], dest[1]))
                         payload = {}
+                        payload['message'] = 'gossip'
                         payload['fuel'] = self.Fs.get_data()
                         payload['direction'] = self.Ds.get_data()
                         payload['light'] = self.Ls.get_data()
@@ -111,7 +186,7 @@ class vehicle:
         self.Ps = Positionsensor("Positionsensor")
 
         self.header = header
-
+        self.Status = "Looking for platoon"
         self.base_station_port = base_station_port
         self.base_station_host = base_station_host
 

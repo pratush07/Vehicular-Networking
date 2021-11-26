@@ -1,0 +1,1 @@
+{"message": "gossip", "fuel": {"id": "FuelSensor", "X": 42.83317305932098}, "direction": {"id": "Directionsensor", "Direction": "East"}, "light": {"id": "Lightsensor", "Beam Intensity": 331.017804768157}, "position": {"id": "Positionsensor", "X": 2267.345442657385, "Y": 1}, "sender": "0"}
