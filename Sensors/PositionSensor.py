@@ -18,8 +18,5 @@ class Positionsensor:
     def get_data(self):
         return self.data
 
-    def get_data_X(self):
-        return self.data['X']
-
     def set_data(self, val):
         self.data['X'] = val

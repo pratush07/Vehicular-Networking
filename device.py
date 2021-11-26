@@ -1,5 +1,5 @@
 # import the socket module
->>>>>>> 414ed1f7c6ce31220406a0cea048043278b3923f
+
 import socket
 from threading import Thread, Lock
 import json
@@ -7,11 +7,13 @@ import time
 from Sensors.SpeedSensor import Speedsensor
 from config import *
 import os
+import random
 
 from Sensors.FuelSensor import Fuelsensor
 from Sensors.DirectionSensor import Directionsensor
 from Sensors.LightSensor import Lightsensor
 from Sensors.PositionSensor import Positionsensor
+from Sensors.SpeedSensor import Speedsensor
 
 
 class vehicle:
@@ -94,71 +96,83 @@ class vehicle:
                 conn, _ = socketObject.accept()
                 message = json.loads(conn.recv(4096).decode('utf-8'))
   
-                print('%s (%s:%s) Incoming Message -> %s (sent by %s)' 
-                % (self.header, self.car_host,str(port),str(message), message['sender']))
+
                 
                 if message['message'] == 'gossip':
+                    print('%s (%s:%s) Incoming Message -> %s (sent by %s)' 
+                    % (self.header, self.car_host,str(port),str(message), message['sender']))
                     self.flushMessages(message)
                 
-                if (self.Status == "Looking for Platoon"):
+                if (self.Status == "Looking for platoon"):
                     Thread(target = self.lookforPrevcar()).start()
                     
                 if message['message'] == 'Join Platoon' and self.Status == "Looking for Platoon":
-                    self.joinnewPlatoon(message)
+                    print("Joining platoon")
+                    Thread(target=self.joinnewPlatoon(message)).start()
     
-    #need to add threshold to config file
-    def lookforPrevcar():
+    
+    def lookforPrevcar(self):
         file_path = os.path.join(messages_dir,self.peer_messages_file)
-        current_pos = self.Ps.get_data()
+        current_pos = self.Ps.get_data()['X']
         tempPrevCar = ""
         tempClosest = 999999
         tempData = ""
+        timetojoin = 0
+        StableSpeed = 0
         
+        print("check")
         with open(file_path,'r') as f:
             lines = f.readlines()
             for line in lines:
                 line = json.loads(line)
                 if (current_pos - line['position']['X'] < tempClosest and current_pos - line['position']['X'] > 0) :
                     tempClosest = current_pos - line['position']['X']
-                    tempPrevCar = lines['sender']
+                    tempPrevCar = line['sender']
                     tempData = line
                     
         if tempPrevCar != "" :
             self.Status = "Joining Platoon"
-            StableSpeed = int(abs(tempData['speed'] - self.Ss.get_data())/2)
+            StableSpeed = int(abs(tempData['speed']['speed'] + self.Ss.get_data()['speed'])/2)
             
-            if tempData['speed'] - self.Ss.get_data() < 0 or (current_pos - line['position']['X'] - threshold)/(tempData['speed'] - self.Ss.get_data()) > timetojoin_threshold:
+            if tempData['speed']['speed'] - self.Ss.get_data()['speed'] < 0 or (current_pos - line['position']['X'] - distance_threshold)/(tempData['speed']['speed'] - self.Ss.get_data()['speed']) > timetojoin_threshold:
                 if (current_pos - line['position']['X'] - distance_threshold)/timetojoin_threshold > maxSpeed:
                     newSpeed = maxSpeed
-                    timetojoin = (current_pos - line['position']['X'] - threshold)/newSpeed
+                    timetojoin = (current_pos - line['position']['X'] - distance_threshold)/newSpeed
                 else:
-                    newSpeed = (current_pos - line['position']['X'] - distance_threshold)/timetojoin_threshold + self.Ss.get_data()
+                    newSpeed = (current_pos - line['position']['X'] - distance_threshold)/timetojoin_threshold + self.Ss.get_data()['speed']
                     timetojoin = timetojoin_threshold
             else:
-                newSpeed = tempData['speed']
-                timetojoin = (current_pos - line['position']['X'] - threshold)/(tempData['speed'] - self.Ss.get_data())
+                newSpeed = tempData['speed']['speed']
+                timetojoin = (current_pos - line['position']['X'] - distance_threshold)/(tempData['speed']['speed'] - self.Ss.get_data()['speed'])
 
             messageID = random.randrange(10000)
             
-        for _, dests in self.peer_discovery_map.items():
-            for dest in dests:
-                if dest[3] == tempPrevCar :
-                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                        s.connect((dest[0], dest[1]))  
-                        payload = {}
-                        payload['message'] = 'Join Platoon'
-                        payload['StableSpeed'] = StableSpeed
-                        payload['newSpeed'] = newSpeed
-                        payload['timetojoin'] = timetojoin
-                        payload['messageID'] = messageID
-                        s.send(json.dumps(payload).encode('utf-8'))
-                        
-        time.sleep(timetojoin)
-        #set speed: to do
-        self.Status = "Stable Platoon formed"
+            for _, dests in self.peer_discovery_map.items():
+                for dest in dests:
+                    if dest[2] == tempPrevCar :
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                            s.connect((dest[0], dest[1]))  
+                            payload = {}
+                            payload['message'] = 'Join Platoon'
+                            payload['StableSpeed'] = StableSpeed
+                            payload['newSpeed'] = newSpeed
+                            payload['timetojoin'] = timetojoin
+                            payload['messageID'] = messageID
+                            s.send(json.dumps(payload).encode('utf-8'))
+            #print('timetojoin: ' + timetojoin )            
+            time.sleep(timetojoin)
+            self.Ss.set_data(StableSpeed)
+            self.Status = "Stable Platoon formed"
+            print("Stable front")
+        
 
-    def joinnewPlatoon(message):
+    def joinnewPlatoon(self, message):
         self.Status == "Join Platoon"
+        self.Ss.set_data(message['newSpeed'])
+        time.sleep(message['timetojoin'])
+        self.Ss.set_data(message['StableSpeed'])
+        self.Status = "Stable Platoon formed"
+        print("Stable rear")
     
 
     def gossip(self):
@@ -175,26 +189,28 @@ class vehicle:
                         payload['direction'] = self.Ds.get_data()
                         payload['light'] = self.Ls.get_data()
                         payload['position'] = self.Ps.get_data()
+                        payload['speed'] = self.Ss.get_data()
+                        payload['status'] = self.Status
                         payload['sender'] = self.header
                         s.send(json.dumps(payload).encode('utf-8'))
                         time.sleep(2)
 
         else:
             print('no device active..')
-        print('going to sleep..')
+        #print('going to sleep..')
         time.sleep(5)
         self.gossip()
 
     def changePosition(self):
-        print("Position change thread running")
-        x = self.Ps.get_data_X()
-        speed = self.Ss.get_speed()
-        dist = speed * 2  # 2 is the time interval, same for thread sleep
-        self.Ps.set_data(x+dist)
+        #print("Position change thread running")
+        x = self.Ps.get_data()
+        speed = self.Ss.get_data()
+        dist = speed['speed'] * 2  # 2 is the time interval, same for thread sleep
+        self.Ps.set_data(x['X']+dist)
         time.sleep(2)
         self.changePosition()
 
-    def __init__(self, header, base_station_host, base_station_port, car_host, top_port, car_port):
+    def __init__(self, header, base_station_host, base_station_port, car_host, top_port, car_port, X, speed):
 
         self.peer_discovery_map = {}
         self.Fs = Fuelsensor("FuelSensor")
@@ -202,7 +218,10 @@ class vehicle:
         self.Ls = Lightsensor("Lightsensor")
         self.Ps = Positionsensor("Positionsensor")
         self.Ss = Speedsensor("Speedsensor")
-
+        
+        self.Ps.set_data(X)
+        self.Ss.set_data(speed)
+        
         self.header = header
         self.Status = "Looking for platoon"
         self.base_station_port = base_station_port

@@ -17,8 +17,5 @@ class Speedsensor:
     def get_data(self):
         return self.data
 
-    def get_speed(self):
-        return self.data['speed']
-
     def set_data(self, val):
         self.data['speed'] = val
