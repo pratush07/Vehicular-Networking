@@ -1,9 +1,10 @@
-#import the socket module
-
+# import the socket module
+>>>>>>> 414ed1f7c6ce31220406a0cea048043278b3923f
 import socket
 from threading import Thread, Lock
 import json
 import time
+from Sensors.SpeedSensor import Speedsensor
 from config import *
 import os
 
@@ -14,12 +15,13 @@ from Sensors.PositionSensor import Positionsensor
 
 
 class vehicle:
-    
+
     def flushPeerDiscoveryMap(self):
         print('saving peer discovery to file..')
-        file_path = os.path.join(discovery_dir,self.peer_map_file)
+        file_path = os.path.join(discovery_dir, self.peer_map_file)
         with open(file_path, 'w') as f:
             json.dump(self.peer_discovery_map, f)
+
     
     def flushMessages(self, message):  
         print('saving peer messages to file..')
@@ -40,22 +42,27 @@ class vehicle:
                 json.dump(message, f)
                 f.write('\n')
 
+
     # update peer discovery map for each peer
     def updatePeerDiscoveryMap(self, peer, routingTable):
         car_ports = []
         for key, data in routingTable.items():
             if self.header != key and self.header != data['header']:
                 car_ports.append((data['address'],data['car_port'],data['header']))
+
         self.peer_discovery_map[self.header] = car_ports
         print(self.peer_discovery_map)
 
     # join network
     def joinNetwork(self, top_port, car_port):
-        #Create a socket instance
+        # Create a socket instance
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
-            socketObject.connect((self.base_station_host, self.base_station_port))
-            print("Connected to %s at port %s" % (self.base_station_host, self.base_station_port))
-            msg = {'header': self.header ,'top_port': top_port, 'car_port': car_port}
+            socketObject.connect(
+                (self.base_station_host, self.base_station_port))
+            print("Connected to %s at port %s" %
+                  (self.base_station_host, self.base_station_port))
+            msg = {'header': self.header,
+                   'top_port': top_port, 'car_port': car_port}
             socketObject.send(json.dumps(msg).encode('utf-8'))
 
     def recvTopology(self, top_port, car_port):
@@ -64,28 +71,29 @@ class vehicle:
             print('binding to ' + str(top_port))
             socketObject.bind((self.car_host, top_port))
             socketObject.listen()
-            
+
             # listen continuously for the topology info as new peers join
             while True:
                 conn, _ = socketObject.accept()
                 routingTable = json.loads(conn.recv(4096).decode('utf-8'))
-                print('%s : New peer joined -> %s' % (str(self.header),str(routingTable)))
+                print('%s : New peer joined -> %s' %
+                      (str(self.header), str(routingTable)))
                 # update peer discovery
-                self.updatePeerDiscoveryMap(car_port,routingTable)
+                self.updatePeerDiscoveryMap(car_port, routingTable)
                 self.flushPeerDiscoveryMap()
 
-    def recvPeerMessages(self,port):
+    def recvPeerMessages(self, port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
             print('listening to car messages')
             print('binding to ' + str(port))
             socketObject.bind((self.car_host, port))
             socketObject.listen()
-            
+
             # listen continuously for the topology info as new peers join
             while True:
                 conn, _ = socketObject.accept()
                 message = json.loads(conn.recv(4096).decode('utf-8'))
-                
+  
                 print('%s (%s:%s) Incoming Message -> %s (sent by %s)' 
                 % (self.header, self.car_host,str(port),str(message), message['sender']))
                 
@@ -152,8 +160,10 @@ class vehicle:
     def joinnewPlatoon(message):
         self.Status == "Join Platoon"
     
+
     def gossip(self):
-        print('%s (%s:%s) is sending messages to peers' %(self.header, self.car_host, self.device_car_port))
+        print('%s (%s:%s) is sending messages to peers' %
+              (self.header, self.car_host, self.device_car_port))
         if len(self.peer_discovery_map) != 0:
             for _, dests in self.peer_discovery_map.items():
                 for dest in dests:
@@ -174,16 +184,24 @@ class vehicle:
         print('going to sleep..')
         time.sleep(5)
         self.gossip()
-    
-    
-    def __init__(self, header,base_station_host, base_station_port, car_host, top_port, car_port):
 
-    
+    def changePosition(self):
+        print("Position change thread running")
+        x = self.Ps.get_data_X()
+        speed = self.Ss.get_speed()
+        dist = speed * 2  # 2 is the time interval, same for thread sleep
+        self.Ps.set_data(x+dist)
+        time.sleep(2)
+        self.changePosition()
+
+    def __init__(self, header, base_station_host, base_station_port, car_host, top_port, car_port):
+
         self.peer_discovery_map = {}
         self.Fs = Fuelsensor("FuelSensor")
         self.Ds = Directionsensor("Directionsensor")
         self.Ls = Lightsensor("Lightsensor")
         self.Ps = Positionsensor("Positionsensor")
+        self.Ss = Speedsensor("Speedsensor")
 
         self.header = header
         self.Status = "Looking for platoon"
@@ -192,24 +210,30 @@ class vehicle:
 
         self.car_host = car_host
         self.device_top_port = top_port
-        self.device_car_port = car_port 
+        self.device_car_port = car_port
 
-        self.peer_map_file =  discovery_map_file_name + "_" + self.header + "." + discovery_map_file_ext
-        self.peer_messages_file = messages_file_name + "_" + self.header +  "." + messages_file_ext
+        self.peer_map_file = discovery_map_file_name + \
+            "_" + self.header + "." + discovery_map_file_ext
+        self.peer_messages_file = messages_file_name + \
+            "_" + self.header + "." + messages_file_ext
 
-        client_receiveTopology = Thread(target=self.recvTopology, args=(self.device_top_port,self.device_car_port,))
-        client_receivePeer = Thread(target=self.recvPeerMessages, args=(self.device_car_port,))
-        client_joinNetwork = Thread(target=self.joinNetwork, args=(self.device_top_port,self.device_car_port,))
+        client_receiveTopology = Thread(target=self.recvTopology, args=(
+            self.device_top_port, self.device_car_port,))
+        client_receivePeer = Thread(
+            target=self.recvPeerMessages, args=(self.device_car_port,))
+        client_joinNetwork = Thread(target=self.joinNetwork, args=(
+            self.device_top_port, self.device_car_port,))
         client_gossip = Thread(target=self.gossip)
-        
+        client_changePosition = Thread(target=self.changePosition)
+
         client_receiveTopology.start()
         client_receivePeer.start()
         client_joinNetwork.start()
         client_gossip.start()
+        client_changePosition.start()
 
         client_receiveTopology.join()
         client_receivePeer.join()
         client_joinNetwork.join()
-        
-        
         client_gossip.join()
+        client_changePosition.join()

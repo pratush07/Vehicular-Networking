@@ -2,7 +2,7 @@ import random
 import json
 
 
-class Positionsensor:
+class Speedsensor:
 
     data = {}
 
@@ -11,15 +11,14 @@ class Positionsensor:
         self.generate_data()
 
     def generate_data(self):
-        record_data = {'id': self.header, 'X': random.uniform(0, 4000), "Y": 1}
-
+        record_data = {'id': self.header, 'speed': random.uniform(30, 70)}
         self.data = record_data
 
     def get_data(self):
         return self.data
 
-    def get_data_X(self):
-        return self.data['X']
+    def get_speed(self):
+        return self.data['speed']
 
     def set_data(self, val):
-        self.data['X'] = val
+        self.data['speed'] = val
