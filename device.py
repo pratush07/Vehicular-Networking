@@ -96,19 +96,20 @@ class vehicle:
                 conn, _ = socketObject.accept()
                 message = json.loads(conn.recv(4096).decode('utf-8'))
   
-
-                
+                print('%s (%s:%s) Incoming Message -> %s (sent by %s)' 
+                % (self.header, self.car_host,str(port),str(message), message['sender']))
+                print('status ' + self.Status + ' message ' + message['message'])
                 if message['message'] == 'gossip':
-                    print('%s (%s:%s) Incoming Message -> %s (sent by %s)' 
-                    % (self.header, self.car_host,str(port),str(message), message['sender']))
                     self.flushMessages(message)
+                    
+                if message['message'] == 'Join Platoon' and self.Status == "Looking for platoon":
+                    print("Joining platoon")
+                    Thread(target=self.joinnewPlatoon(message)).start()
                 
                 if (self.Status == "Looking for platoon"):
                     Thread(target = self.lookforPrevcar()).start()
-                    
-                if message['message'] == 'Join Platoon' and self.Status == "Looking for Platoon":
-                    print("Joining platoon")
-                    Thread(target=self.joinnewPlatoon(message)).start()
+                    print("check " + self.header)
+                   
     
     
     def lookforPrevcar(self):
@@ -132,6 +133,7 @@ class vehicle:
                     
         if tempPrevCar != "" :
             self.Status = "Joining Platoon"
+            print(self.Status + ' ' + self.header)
             StableSpeed = int(abs(tempData['speed']['speed'] + self.Ss.get_data()['speed'])/2)
             
             if tempData['speed']['speed'] - self.Ss.get_data()['speed'] < 0 or (current_pos - line['position']['X'] - distance_threshold)/(tempData['speed']['speed'] - self.Ss.get_data()['speed']) > timetojoin_threshold:
@@ -158,8 +160,9 @@ class vehicle:
                             payload['newSpeed'] = newSpeed
                             payload['timetojoin'] = timetojoin
                             payload['messageID'] = messageID
+                            payload['sender'] = self.header
                             s.send(json.dumps(payload).encode('utf-8'))
-            #print('timetojoin: ' + timetojoin )            
+            print('timetojoin: ' + str(timetojoin) + ' ' +self.header)            
             time.sleep(timetojoin)
             self.Ss.set_data(StableSpeed)
             self.Status = "Stable Platoon formed"
