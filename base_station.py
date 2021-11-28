@@ -1,8 +1,10 @@
 import socket
 from config import *
-from threading import Thread
+from threading import Thread, Lock
 import json
 import argparse
+
+lock = Lock()
 
 network_participants = {}
 
@@ -14,15 +16,17 @@ def return_topolgy():
     print('sending new routing table to all peers')
     print(network_participants)
 
-    for _, data in network_participants.items():
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((data['address'], data['top_port']))
-            s.send(json.dumps(network_participants).encode('utf-8'))
+    with lock:
+        for _, data in network_participants.items():
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((data['address'], data['top_port']))
+                s.send(json.dumps(network_participants).encode('utf-8'))
 
 def add_to_network(addr, data):
     address = addr[0]
     data['address'] = address
-    network_participants[data['header']] = data
+    with lock:
+        network_participants[data['header']] = data
 
 # if new peers join, they will a send a message here
 def listen_for_topology():

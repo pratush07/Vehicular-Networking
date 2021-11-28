@@ -53,6 +53,7 @@ class vehicle:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
             print('listening to topology messages')
             print('binding to ' + str(top_port))
+            socketObject.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             socketObject.bind((self.car_host, top_port))
             socketObject.listen()
 
@@ -65,11 +66,48 @@ class vehicle:
                 # update peer discovery
                 self.updatePeerDiscoveryMap(car_port, routingTable)
                 self.flushPeerDiscoveryMap()
+    
+    def detect_car_proximity(self, message):
+        # check if we are processing gossiping information
+        if message['type'] != 'Gossip':
+            return
+
+        pos_incom_car = message['position']
+        speed_incom_car = message['speed']
+        relative_dist = self.Ps.get_data()['X'] - pos_incom_car['X']
+        sender_host = message['sender'].split("_")[1]
+        sender_port = int(message['sender'].split("_")[2])
+        
+        # it is a car moving in the rear..assuming speed of the font car will be less than the one behind
+        if relative_dist > 0 and relative_dist <= car_distance_threshold :
+            # check if the car enters the threshold region
+            print('Proximity detected with car %s' % (message['sender']))
+
+            # log in a file
+            file_path = os.path.join(stability_dir, stability_log_file_name + "_" 
+            + self.car_host + "_" + str(self.device_car_port)) + "." + stability_log_file_ext
+            with open(file_path, 'a+') as f:
+                f.write('%s at location %s m and speed %s (m/s) detected proximity with car %s at location %s m and speed %s (m/s)' % 
+                (self.header, self.Ps.get_data()['X'], self.Ss.get_data()['speed'], message['sender'],
+                pos_incom_car['X'], speed_incom_car['speed']))
+                f.write("\n")
+
+            # send the new speed to the car
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((sender_host, sender_port))
+                payload = {}
+                payload['speed'] = self.Ss.get_data()['speed']
+                payload['type'] = 'Stable Speed'
+                payload['sender'] = self.header
+                s.send(json.dumps(payload).encode('utf-8'))
+
+
 
     def recvPeerMessages(self, port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
             print('listening to car messages')
             print('binding to ' + str(port))
+            socketObject.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             socketObject.bind((self.car_host, port))
             socketObject.listen()
 
@@ -82,6 +120,22 @@ class vehicle:
                       % (self.header, self.car_host, str(port), str(message), message['sender']))
 
                 self.flushMessages(message)
+                
+                self.detect_car_proximity(message)
+                
+                self.stabalize_speed_if_applicable(message)
+
+
+    def stabalize_speed_if_applicable(self,message):
+        if message['type'] != 'Stable Speed':
+            return
+        
+        # reduce the car speed temporarily to get out of detection zone
+        self.Ss.set_data(message['speed']-2)
+        time.sleep(3)
+
+        # now stabalize
+        self.Ss.set_data(message['speed'])
 
     def gossip(self):
         print('%s (%s:%s) is sending messages to peers' %
@@ -96,6 +150,8 @@ class vehicle:
                         payload['direction'] = self.Ds.get_data()
                         payload['light'] = self.Ls.get_data()
                         payload['position'] = self.Ps.get_data()
+                        payload['speed'] = self.Ss.get_data()
+                        payload['type'] = 'Gossip'
                         payload['sender'] = self.header
                         s.send(json.dumps(payload).encode('utf-8'))
                         time.sleep(2)
@@ -103,7 +159,7 @@ class vehicle:
         else:
             print('no device active..')
         print('going to sleep..')
-        time.sleep(5)
+        time.sleep(2)
         self.gossip()
 
     def changePosition(self):
@@ -115,7 +171,8 @@ class vehicle:
         time.sleep(2)
         self.changePosition()
 
-    def __init__(self, header, base_station_host, base_station_port, car_host, top_port, car_port):
+    def __init__(self, header, base_station_host, base_station_port, car_host, top_port, 
+                car_port, vehicle_pos=None, vehicle_speed=None):
 
         self.peer_discovery_map = {}
         self.Fs = Fuelsensor("FuelSensor")
@@ -123,6 +180,12 @@ class vehicle:
         self.Ls = Lightsensor("Lightsensor")
         self.Ps = Positionsensor("Positionsensor")
         self.Ss = Speedsensor("Speedsensor")
+
+        # for running simulation. Positioning vehicles
+        if vehicle_pos:
+            self.Ps.set_data(vehicle_pos)
+        if vehicle_speed:
+            self.Ss.set_data(vehicle_speed)
 
         self.header = header
 
