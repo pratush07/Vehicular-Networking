@@ -12,6 +12,12 @@ def main():
 
     if not os.path.exists(messages_dir):
         os.makedirs(messages_dir)
+    
+    if not os.path.exists(stability_dir):
+        os.makedirs(stability_dir)
+    
+    if not os.path.exists(car_info_dir):
+        os.makedirs(car_info_dir)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--base-host', help='base station host', type=str)

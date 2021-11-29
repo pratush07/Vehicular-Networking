@@ -27,6 +27,13 @@ class vehicle:
         with open(file_path, 'a+') as f:
             json.dump(message, f)
             f.write("\n")
+    
+    def flushPosAndSpeed(self):
+        print('logging speed and position')
+        file_path = os.path.join(car_info_dir, self.car_info_file)
+        with open(file_path, 'w') as f:
+            json.dump({'X': self.Ps.get_data()['X'], 'Speed': self.Ss.get_data() }, f)
+            f.write("\n")
 
     # update peer discovery map for each peer
     def updatePeerDiscoveryMap(self, peer, routingTable):
@@ -168,6 +175,7 @@ class vehicle:
         speed = self.Ss.get_speed()
         dist = speed * 2  # 2 is the time interval, same for thread sleep
         self.Ps.set_data(x+dist)
+        self.flushPosAndSpeed()
         time.sleep(2)
         self.changePosition()
 
@@ -200,6 +208,9 @@ class vehicle:
             "_" + self.header + "." + discovery_map_file_ext
         self.peer_messages_file = messages_file_name + \
             "_" + self.header + "." + messages_file_ext
+
+        self.car_info_file = car_info_file_name + \
+            "_" + self.header + "." + car_info_file_ext
 
         client_receiveTopology = Thread(target=self.recvTopology, args=(
             self.device_top_port, self.device_car_port,))

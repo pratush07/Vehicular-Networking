@@ -17,11 +17,15 @@ def main():
     if os.path.exists(stability_dir):
         shutil.rmtree(stability_dir) 
     
+    if os.path.exists(car_info_dir):
+        shutil.rmtree(car_info_dir) 
+    
     time.sleep(3)
 
     os.makedirs(discovery_dir)
     os.makedirs(messages_dir)
     os.makedirs(stability_dir)
+    os.makedirs(car_info_dir)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--base-host', help='base station host', type=str)
