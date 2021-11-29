@@ -31,7 +31,7 @@ class vehicle:
     def flushPosAndSpeed(self):
         print('logging speed and position')
         file_path = os.path.join(car_info_dir, self.car_info_file)
-        with open(file_path, 'w') as f:
+        with open(file_path, 'a+') as f:
             json.dump({'X': self.Ps.get_data()['X'], 'Speed': self.Ss.get_data() }, f)
             f.write("\n")
 
