@@ -31,6 +31,7 @@ def add_to_network(addr, data):
 # if new peers join, they will a send a message here
 def listen_for_topology():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((base_station_host, base_station_port))
         s.listen()
         print('Started. Accepting Connections..')
