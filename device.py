@@ -110,7 +110,7 @@ class vehicle:
                 payload['speed'] = self.Ss.get_data()['speed']
                 payload['type'] = 'Stable Speed'
                 payload['sender'] = self.header
-                s.send(encrypt_public_key(json.dumps(payload)))
+                s.send(encrypt_public_key(bytes(json.dumps(payload), 'utf-8')))
 
     def recvPeerMessages(self, port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
