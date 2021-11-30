@@ -6,6 +6,7 @@ import shutil
 import time
 import argparse
 from platoon_config import *
+from secure_comm import generate_keys
 
 def main():
     if os.path.exists(discovery_dir):
@@ -18,7 +19,10 @@ def main():
         shutil.rmtree(stability_dir) 
     
     if os.path.exists(car_info_dir):
-        shutil.rmtree(car_info_dir) 
+        shutil.rmtree(car_info_dir)
+    
+    if os.path.exists(security_dir):
+        shutil.rmtree(security_dir) 
     
     time.sleep(3)
 
@@ -26,6 +30,9 @@ def main():
     os.makedirs(messages_dir)
     os.makedirs(stability_dir)
     os.makedirs(car_info_dir)
+
+    generate_keys()
+
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--base-host', help='base station host', type=str)

@@ -14,5 +14,7 @@ car_info_dir = 'car_logs'
 car_info_file_name = 'car'
 car_info_file_ext = 'txt'
 
+security_dir = 'keys'
+
 
 car_distance_threshold = 40

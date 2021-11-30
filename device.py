@@ -14,6 +14,7 @@ from Sensors.FuelSensor import Fuelsensor
 from Sensors.DirectionSensor import Directionsensor
 from Sensors.LightSensor import Lightsensor
 from Sensors.PositionSensor import Positionsensor
+from secure_comm import encrypt_public_key, decrypt_private_key
 
 
 class vehicle:
@@ -109,7 +110,7 @@ class vehicle:
                 payload['speed'] = self.Ss.get_data()['speed']
                 payload['type'] = 'Stable Speed'
                 payload['sender'] = self.header
-                s.send(json.dumps(payload).encode('utf-8'))
+                s.send(encrypt_public_key(bytes(json.dumps(payload),'utf-8')))
 
     def recvPeerMessages(self, port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
@@ -122,7 +123,7 @@ class vehicle:
             # listen continuously for the topology info as new peers join
             while True:
                 conn, _ = socketObject.accept()
-                message = json.loads(conn.recv(4096).decode('utf-8'))
+                message = json.loads(decrypt_private_key(conn.recv(4096).decode('utf-8')))
 
                 print('%s (%s:%s) Incoming Message -> %s (sent by %s)'
                       % (self.header, self.car_host, str(port), str(message), message['sender']))
@@ -163,7 +164,7 @@ class vehicle:
                         payload['obstacle_detected'] = self.Pr.get_data()
                         payload['type'] = 'Gossip'
                         payload['sender'] = self.header
-                        s.send(json.dumps(payload).encode('utf-8'))
+                        s.send(encrypt_public_key(bytes(json.dumps(payload),'utf-8')))
                         time.sleep(2)
 
         else:
