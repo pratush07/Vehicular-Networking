@@ -6,7 +6,6 @@ import shutil
 import time
 import argparse
 from platoon_config import *
-from secure_comm import generate_keys
 
 def main():
     if os.path.exists(discovery_dir):

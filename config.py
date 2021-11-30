@@ -16,5 +16,7 @@ car_info_file_ext = 'txt'
 
 security_dir = 'keys'
 
+secure_key = b'-ikzjhkLW3Zqdu2Z2RKAPE6z3vH-4YGMegoz8uH4ynU='
+
 
 car_distance_threshold = 40
