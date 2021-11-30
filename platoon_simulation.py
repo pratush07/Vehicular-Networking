@@ -21,8 +21,6 @@ def main():
     if os.path.exists(car_info_dir):
         shutil.rmtree(car_info_dir)
     
-    if os.path.exists(security_dir):
-        shutil.rmtree(security_dir) 
     
     time.sleep(3)
 
@@ -30,8 +28,6 @@ def main():
     os.makedirs(messages_dir)
     os.makedirs(stability_dir)
     os.makedirs(car_info_dir)
-
-    generate_keys()
 
 
     parser = argparse.ArgumentParser()
