@@ -12,16 +12,14 @@ public_key = None
 f = Fernet(secure_key)
 
 def encrypt_public_key(a_message):
-  
-    return f.encrypt(a_message)
+    print('encrypting ..' + str(a_message))
+    enc_message = f.encrypt(a_message)
+    print(enc_message)
+    return f.encrypt(enc_message)
 
 def decrypt_private_key(encoded_encrypted_msg):
+    print('decrypting ..' + str(encoded_encrypted_msg))
+    msg = f.decrypt(encoded_encrypted_msg)
+    print(msg)
+    return msg
 
-   return f.decrypt(encoded_encrypted_msg)
-
-
-# generate_keys()
-# message = bytes('Hello world', 'utf-8')
-# message = bytes(json.dumps({'a': 1, 'b': 1, 'c': 1, 'd': 1, 'e': 1, 'f': 1}), 'utf-8')
-# encoded = encrypt_public_key(message)
-# print(json.loads(decrypt_private_key(encoded)))
