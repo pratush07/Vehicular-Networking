@@ -1,15 +1,15 @@
+# Contributors - Abhas Goyal, Zoya Yasin, Pratush Pandita
 # import the socket module
 import socket
 from threading import Thread, Lock
 import json
 import time
+from config import *
+import os
 from Sensors.LaneWidthSensor import Lanewidthsensor
 from Sensors.PowerLevelIndicator import Powerlevelindicator
 from Sensors.ProximitySensors import Proximitysensor
 from Sensors.SpeedSensor import Speedsensor
-from config import *
-import os
-
 from Sensors.FuelSensor import Fuelsensor
 from Sensors.DirectionSensor import Directionsensor
 from Sensors.LightSensor import Lightsensor
@@ -17,20 +17,23 @@ from Sensors.PositionSensor import Positionsensor
 
 
 class vehicle:
-
+    
+    #Contribution of Pratush Pandita
     def flushPeerDiscoveryMap(self):
         print('saving peer discovery to file..')
         file_path = os.path.join(discovery_dir, self.peer_map_file)
         with open(file_path, 'w') as f:
             json.dump(self.peer_discovery_map, f)
 
+    #Contribution of Pratush Pandita
     def flushMessages(self, message):
         print('saving peer messages to file..')
         file_path = os.path.join(messages_dir, self.peer_messages_file)
         with open(file_path, 'a+') as f:
             json.dump(message, f)
             f.write("\n")
-    
+
+    #Contribution of Abhas Goyal
     def flushPosAndSpeed(self):
         print('logging speed and position')
         file_path = os.path.join(car_info_dir, self.car_info_file)
@@ -38,6 +41,7 @@ class vehicle:
             json.dump({'X': self.Ps.get_data()['X'], 'Speed': self.Ss.get_data() }, f)
             f.write("\n")
 
+    #Contribution of Pratush Pandita
     # update peer discovery map for each peer
     def updatePeerDiscoveryMap(self, peer, routingTable):
         car_ports = []
@@ -47,6 +51,7 @@ class vehicle:
         self.peer_discovery_map[self.header] = car_ports
         print(self.peer_discovery_map)
 
+    #Contribution of Pratush Pandita
     # join network
     def joinNetwork(self, top_port, car_port):
         # Create a socket instance
@@ -59,6 +64,7 @@ class vehicle:
                    'top_port': top_port, 'car_port': car_port}
             socketObject.send(json.dumps(msg).encode('utf-8'))
 
+    #Contribution of Pratush Pandita
     def recvTopology(self, top_port, car_port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
             print('listening to topology messages')
@@ -77,6 +83,7 @@ class vehicle:
                 self.updatePeerDiscoveryMap(car_port, routingTable)
                 self.flushPeerDiscoveryMap()
 
+    #Contribution of Abhas Goyal
     def detect_car_proximity(self, message):
         # check if we are processing gossiping information
         if message['type'] != 'Gossip':
@@ -111,6 +118,7 @@ class vehicle:
                 payload['sender'] = self.header
                 s.send(json.dumps(payload).encode('utf-8'))
 
+    #Contribution of Abhas Goyal
     def recvPeerMessages(self, port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socketObject:
             print('listening to car messages')
@@ -133,6 +141,7 @@ class vehicle:
 
                 self.stabalize_speed_if_applicable(message)
 
+    #Contribution of Abhas Goyal
     def stabalize_speed_if_applicable(self, message):
         if message['type'] != 'Stable Speed':
             return
@@ -144,6 +153,7 @@ class vehicle:
         # now stabalize
         self.Ss.set_data(message['speed'])
 
+    #Contribution of Abhas Goyal
     def gossip(self):
         print('%s (%s:%s) is sending messages to peers' %
               (self.header, self.car_host, self.device_car_port))
@@ -172,6 +182,7 @@ class vehicle:
         time.sleep(2)
         self.gossip()
 
+    #Contribution of Zoya Yasin
     def changePosition(self):
         print("Position change thread running")
         x = self.Ps.get_data_X()
@@ -182,6 +193,7 @@ class vehicle:
         time.sleep(2)
         self.changePosition()
 
+    #Contribution of Zoya Yasin
     def changePowerLevel(self):
         print("Power level change thread running")
         self.Pl.set_data(self.Pl.get_power_level() - 0.5)
